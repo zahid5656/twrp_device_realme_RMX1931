@@ -1,11 +1,12 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Samurai recovery build <samurai@localhost>
 Date: Thu, 16 Jul 2026 00:00:01 +0600
-Subject: [PATCH] libtar: use the fscrypt policy struct tag
+Subject: [PATCH] libtar: use Android 14 fscrypt policy v2 struct
 
-Android 14's UAPI defines fscrypt_policy as a macro expanding to the
-fscrypt_policy_v1 struct tag, not as a typedef.  Use the struct spelling for
-the pointer, allocation casts, and sizeof expressions.
+Android 14 TWRP vold selects fscrypt policy v2 unless
+TW_USE_FSCRYPT_POLICY is explicitly set to 1. Samurai QPR2 uses policy v2,
+so make libtar use struct fscrypt_policy_v2 instead of the legacy policy-v1
+alias.
 ---
  libtar/append.c | 2 +-
  libtar/block.c  | 2 +-
@@ -16,12 +17,12 @@ diff --git a/libtar/append.c b/libtar/append.c
 index 23d2b7e..d25ac85 100644
 --- a/libtar/append.c
 +++ b/libtar/append.c
-@@ -143,7 +143,7 @@ th_read(TAR *t, const char *realname)
+@@ -143,7 +143,7 @@ tar_append_file(TAR *t, const char *realname, const char *savename)
  			free(t->th_buf.fep);
  			t->th_buf.fep = NULL;
  		}
 -		t->th_buf.fep = (fscrypt_policy *)malloc(sizeof(fscrypt_policy));
-+		t->th_buf.fep = (struct fscrypt_policy *)malloc(sizeof(struct fscrypt_policy));
++		t->th_buf.fep = (struct fscrypt_policy_v2 *)malloc(sizeof(struct fscrypt_policy_v2));
  		if (!t->th_buf.fep) {
  			LOG("malloc fs_encryption_policy\n");
  			return -1;
@@ -34,7 +35,7 @@ index f3efbec..08b9718 100644
  			start = strstr(buf, FSCRYPT_TAG);
  			if (start && start+FSCRYPT_TAG_LEN < buf+len) {
 -				t->th_buf.fep = (fscrypt_policy*)malloc(sizeof(fscrypt_policy));
-+				t->th_buf.fep = (struct fscrypt_policy*)malloc(sizeof(struct fscrypt_policy));
++				t->th_buf.fep = (struct fscrypt_policy_v2*)malloc(sizeof(struct fscrypt_policy_v2));
  				if (!t->th_buf.fep) {
  					LOG("malloc failed for fscrypt policy\n");
  					return -1;
@@ -47,7 +48,7 @@ index 761cd68..7447ad5 100644
  	char *selinux_context;
  #ifdef USE_FSCRYPT
 -	fscrypt_policy  *fep;
-+	struct fscrypt_policy *fep;
++	struct fscrypt_policy_v2 *fep;
  #endif
  	int has_cap_data;
  	struct vfs_cap_data cap_data;
