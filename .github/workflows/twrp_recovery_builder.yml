@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: twrp-14.1-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build TWRP
@@ -18,6 +22,11 @@ jobs:
     steps:
       - name: Checkout device tree
         uses: actions/checkout@v4
+
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+          df -h /
 
       - name: Install dependencies
         run: |
@@ -50,9 +59,12 @@ jobs:
           restore-keys: |
             ccache-${{ runner.os }}-
 
-      - name: Initialize latest TWRP 14.1 source
+      - name: Create workspace
         run: |
           mkdir -p workspace
+
+      - name: Initialize latest TWRP 14.1 source
+        run: |
           cd workspace
           repo init \
             --depth=1 \
@@ -62,7 +74,16 @@ jobs:
       - name: Sync source
         run: |
           cd workspace
-          repo sync -c --force-sync --no-clone-bundle --no-tags -j"$(nproc)"
+          repo sync \
+            -c \
+            --force-sync \
+            --no-clone-bundle \
+            --no-tags \
+            --optimized-fetch \
+            --prune \
+            --retry-fetches=3 \
+            -j"$(nproc)"
+          df -h /
 
       - name: Record exact source revisions
         run: |
@@ -98,10 +119,11 @@ jobs:
           cd workspace
           export USE_CCACHE=1
           export CCACHE_DIR="$HOME/.ccache"
-          ccache -M 10G
+          ccache -M 2G
           ccache -z
           bash device/realme/samurai/build.sh
           ccache -s
+          df -h /
 
       - name: Collect validation artifacts
         if: always()
