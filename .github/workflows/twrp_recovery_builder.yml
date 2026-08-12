@@ -77,9 +77,6 @@ jobs:
             echo "TeamWin/android_vendor_twrp android-14.1: $(git -C vendor/twrp rev-parse HEAD)"
           } | tee twrp-source-pins.txt
 
-      - name: Remove repo metadata
-        run: rm -rf workspace/.repo
-
       - name: Link device tree
         run: |
           mkdir -p workspace/device/realme/samurai
@@ -88,13 +85,10 @@ jobs:
             --exclude '.git' \
             ./ workspace/device/realme/samurai/
 
-      - name: Bootstrap current prebuilt checksums
+      - name: Verify pinned prebuilt checksums
         run: |
           cd workspace/device/realme/samurai/prebuilt
-          if [[ ! -s SHA256SUMS ]]; then
-            sha256sum Image.gz-dtb dtbo.img > SHA256SUMS
-          fi
-          cat SHA256SUMS
+          sha256sum -c SHA256SUMS
 
       - name: Build and validate recovery
         env:
