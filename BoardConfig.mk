@@ -102,7 +102,6 @@ TARGET_COPY_OUT_VENDOR := vendor
 
 # System as root
 BOARD_ROOT_EXTRA_FOLDERS := bluetooth dsp firmware persist
-BOARD_BUILD_SYSTEM_ROOT_IMAGE := true
 
 # Extras
 BOARD_SUPPRESS_SECURE_ERASE := true
