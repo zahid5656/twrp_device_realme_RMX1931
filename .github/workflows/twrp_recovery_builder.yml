@@ -62,7 +62,7 @@ jobs:
           repo init \
             --depth=1 \
             -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git \
-            -b twrp-12.1
+            -b twrp-14.1
 
       - name: Repo Sync
         run: |
@@ -79,6 +79,14 @@ jobs:
           # Since the github action checks out the current branch into the runner root workspace,
           # we just move it into the TWRP build tree. We move all contents except the workspace dir.
           rsync -a --exclude 'workspace' ./ workspace/device/realme/samurai/
+
+      - name: Apply TWRP Patches
+        run: |
+          cd workspace
+          for patch in device/realme/samurai/patches/twrp-14.1/*.patch; do
+            echo "Applying $patch"
+            git -C bootable/recovery apply "$patch"
+          done
 
       - name: Build Recovery
         env:
