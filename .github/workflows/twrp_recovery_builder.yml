@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - TWRP-14.1-A16
+      - twrp-14.1
       - main
       - master
 
@@ -108,7 +108,7 @@ jobs:
       - name: Generate Release Tag
         id: tag
         run: |
-          echo "tag=TWRP-14.1-A16-$(date +'%Y%m%d-%H%M%S')" >> "$GITHUB_OUTPUT"
+          echo "tag=twrp-14.1-$(date +'%Y%m%d-%H%M%S')" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
