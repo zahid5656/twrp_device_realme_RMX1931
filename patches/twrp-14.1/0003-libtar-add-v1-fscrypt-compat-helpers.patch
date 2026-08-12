@@ -1,20 +1,50 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Samurai recovery build <samurai@localhost>
 Date: Thu, 16 Jul 2026 00:00:02 +0600
-Subject: [PATCH] libtar: add Android 14 fscrypt v1 compatibility helpers
+Subject: [PATCH] libtar: add Android 14 fscrypt v2 compatibility helpers
 
-TeamWin libtar still calls the fscrypt policy-union helpers that were present
-in older vold branches.  Android 14's vold selects the policy version at build
-time and no longer exports those helpers.  The Samurai tree explicitly selects
-policy v1, so provide the equivalent v1-only inline operations in libtar.
+TeamWin libtar still calls fscrypt policy helpers that are no longer exported
+by Android 14 vold. Samurai QPR2 selects policy v2, so provide local helpers
+for struct fscrypt_policy_v2 and use the 16-byte v2 master-key identifier.
 
-Also pass the archived policy-type descriptor to lookup_ref_tar(), matching its
-Android 14 signature.
+Android 14 vold already prefixes policy-type strings with the policy version
+(2CE/2DE/2DK), so do not prepend fep->version a second time.
 ---
+ libtar/append.c  | 13 +++++++------
  libtar/extract.c |  2 +-
  libtar/libtar.h  | 40 ++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 41 insertions(+), 1 deletion(-)
+ 3 files changed, 48 insertions(+), 7 deletions(-)
 
+diff --git a/libtar/append.c b/libtar/append.c
+index d25ac85..3bd7ee0 100644
+--- a/libtar/append.c
++++ b/libtar/append.c
+@@ -153,10 +153,9 @@ tar_append_file(TAR *t, const char *realname, const char *savename)
+ 			size = get_policy_size(t->th_buf.fep, false);
+ 			hex_size = get_policy_size(t->th_buf.fep, true);
+ 			descriptor = get_policy_descriptor(t->th_buf.fep);
+-			char user_ce[4], user_de[4], system_de[4];
+-			sprintf(user_ce,"%u%s", t->th_buf.fep->version, USER_CE_FSCRYPT_POLICY);
+-			sprintf(user_de,"%u%s", t->th_buf.fep->version, USER_DE_FSCRYPT_POLICY);
+-			sprintf(system_de,"%u%s", t->th_buf.fep->version, SYSTEM_DE_FSCRYPT_POLICY);
++			char user_ce[4] = USER_CE_FSCRYPT_POLICY;
++			char user_de[4] = USER_DE_FSCRYPT_POLICY;
++			char system_de[4] = SYSTEM_DE_FSCRYPT_POLICY;
+ #ifdef DEBUG
+ 			LOG("version: %u\n", t->th_buf.fep->version);
+ #endif
+@@ -168,8 +167,10 @@ tar_append_file(TAR *t, const char *realname, const char *savename)
+ 			bytes_to_hex(descriptor, size, policy_hex);
+ 			if (lookup_ref_key(t->th_buf.fep,  &tar_policy[0])) {
+ 				if (strncmp((char *) tar_policy, user_ce, sizeof(user_ce) - 1) == 0 
+-				|| strncmp((char *) tar_policy, user_de, sizeof(user_de) - 1) == 0 
+-				|| strncmp((char *) tar_policy, system_de, sizeof(system_de)) == 0) {
++				|| strncmp((char *) tar_policy, user_de, sizeof(user_de) - 1) == 0
++				|| strncmp((char *) tar_policy, system_de,
++						sizeof(system_de) - 1) == 0) {
+ 					memcpy(descriptor, tar_policy, size);
+ 					LOG("found fscrypt policy '%s' - '%s' - '%s'\n", realname, descriptor, policy_hex);
+ 				} else {
 diff --git a/libtar/extract.c b/libtar/extract.c
 index 15127ab..5b13c62 100644
 --- a/libtar/extract.c
@@ -48,33 +78,33 @@ index 7447ad5..ac4b15f 100644
  #include "fscrypt_policy.h"
 +
 +/*
-+ * Android 14 vold no longer exports the policy-union accessors used by
-+ * TeamWin's libtar.  TW_USE_FSCRYPT_POLICY=1 selects the v1 structure for
-+ * Samurai, so keep the compatibility operations local to libtar.
++ * Android 14 vold no longer exports the policy helper accessors used by
++ * TeamWin's libtar. TW_USE_FSCRYPT_POLICY=2 selects fscrypt_policy_v2 for
++ * Samurai QPR2, so keep the compatibility operations local to libtar.
 + */
-+static inline uint8_t *get_policy_descriptor(struct fscrypt_policy_v1 *policy)
++static inline uint8_t *get_policy_descriptor(struct fscrypt_policy_v2 *policy)
 +{
-+	return policy ? policy->master_key_descriptor : NULL;
++	return policy ? policy->master_key_identifier : NULL;
 +}
 +
-+static inline uint8_t get_policy_size(struct fscrypt_policy_v1 *policy, bool hex)
++static inline uint8_t get_policy_size(struct fscrypt_policy_v2 *policy, bool hex)
 +{
 +	if (!policy)
 +		return 0;
-+	return hex ? FS_KEY_DESCRIPTOR_SIZE_HEX : FSCRYPT_KEY_DESCRIPTOR_SIZE;
++	return hex ? FSCRYPT_KEY_IDENTIFIER_HEX_SIZE : FSCRYPT_KEY_IDENTIFIER_SIZE;
 +}
 +
-+static inline void *get_policy(const struct fscrypt_policy_v1 *policy)
++static inline void *get_policy(const struct fscrypt_policy_v2 *policy)
 +{
 +	return (void *)policy;
 +}
 +
-+static inline int fscrypt_policy_size(const struct fscrypt_policy_v1 *policy)
++static inline int fscrypt_policy_size(const struct fscrypt_policy_v2 *policy)
 +{
 +	return policy ? (int)sizeof(*policy) : 0;
 +}
 +
-+static inline void get_policy_content(struct fscrypt_policy_v1 *policy,
++static inline void get_policy_content(struct fscrypt_policy_v2 *policy,
 +		char *content)
 +{
 +	if (!policy || !content)
