@@ -161,17 +161,22 @@ apply_source_compat_patches() {
     local top="$1"
     local patch_dir="${script_dir}/patches/twrp-14.1"
     local patch
+    local patches=(
+        "0001-recovery-use-current-AIDL-NDK-module-names.patch"
+        "0002-libtar-use-fscrypt-policy-struct-tag.patch"
+    )
 
     if [[ ! -d "${top}/bootable/recovery/.git" && ! -f "${top}/bootable/recovery/.git" ]]; then
         echo "error: bootable/recovery is not a Git checkout under ${top}" >&2
         exit 1
     fi
 
-    for patch in "${patch_dir}"/*.patch; do
-        if git -C "${top}/bootable/recovery" apply --check "${patch}" 2>/dev/null; then
+    for patch in "${patches[@]}"; do
+        patch="${patch_dir}/${patch}"
+        if git -C "${top}/bootable/recovery" apply --check "${patch}"; then
             echo "Applying TWRP 14.1 source compatibility patch: $(basename "${patch}")"
             git -C "${top}/bootable/recovery" apply "${patch}"
-        elif git -C "${top}/bootable/recovery" apply --reverse --check "${patch}" 2>/dev/null; then
+        elif git -C "${top}/bootable/recovery" apply --reverse --check "${patch}"; then
             echo "TWRP 14.1 source compatibility patch already applied: $(basename "${patch}")"
         else
             echo "error: source compatibility patch does not match this TWRP tree: ${patch}" >&2
@@ -213,7 +218,7 @@ Then run:
   ./device/realme/samurai/build.sh
 
 Expected source branch:
-  twrp-14.1-a13-a16-decrypt-readiness
+  twrp-14.1
 EOF
     exit 1
 fi
@@ -234,9 +239,6 @@ echo "Build log        : ${log_file}"
 echo
 
 {
-    # Android's envsetup and lunch functions intentionally probe many unset
-    # variables, so nounset cannot remain enabled inside the sourced build
-    # environment. Keep errexit and pipefail for the actual build commands.
     set -eo pipefail
     set +u
     source build/envsetup.sh
