@@ -19,7 +19,7 @@ First checkout minimal twrp source:
 ```
 repo init --depth=1 -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-14.1
 repo sync
-git clone https://github.com/zahid5656/twrp_device_realme_RMX1931.git -b twrp-14.1-a13-a16-decrypt-readiness device/realme/samurai
+git clone https://github.com/zahid5656/twrp_device_realme_RMX1931.git -b twrp-14.1 device/realme/samurai
 
 ```
 
