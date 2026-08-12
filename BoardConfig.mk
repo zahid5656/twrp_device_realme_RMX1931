@@ -1,10 +1,10 @@
 #
-# Copyright (C) 2022 Team Win Recovery Project
+# Copyright (C) 2024 Team Win Recovery Project
 #
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# For building with minimal manifest
+# For building with minimal manifest in QPR2
 ALLOW_MISSING_DEPENDENCIES := true
 
 # Device Path
@@ -29,13 +29,11 @@ ENABLE_SCHEDBOOST := true
 # GPT Utils
 BOARD_PROVIDES_GPTUTILS := true
 
-# Bootloader
+# Bootloader / Platform
 PRODUCT_PLATFORM := msmnile
 TARGET_BOOTLOADER_BOARD_NAME := msmnile
 TARGET_NO_BOOTLOADER := true
 TARGET_USES_UEFI := true
-
-# Platform
 BOARD_USES_QCOM_HARDWARE := true
 QCOM_BOARD_PLATFORMS += msmnile
 TARGET_BOARD_PLATFORM := msmnile
@@ -105,7 +103,7 @@ BOARD_BUILD_SYSTEM_ROOT_IMAGE := true
 BOARD_SUPPRESS_SECURE_ERASE := true
 TARGET_SYSTEM_PROP += $(DEVICE_PATH)/system.prop
 
-# Crypto
+# Crypto (Android 14 FBE compatibility)
 BOARD_USES_METADATA_PARTITION := true
 BOARD_USES_QCOM_FBE_DECRYPTION := true
 TW_INCLUDE_CRYPTO := true
@@ -151,7 +149,7 @@ TW_SKIP_COMPATIBILITY_CHECK := true
 TWRP_INCLUDE_LOGCAT := true
 TARGET_USES_LOGD := true
 
-# TWRP 14.1 recovery-tree compatibility
+# QPR2 / TWRP 14.1 recovery-tree compatibility
 BUILD_BROKEN_DUP_RULES := true
 BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
 BUILD_BROKEN_MISSING_REQUIRED_MODULES := true
