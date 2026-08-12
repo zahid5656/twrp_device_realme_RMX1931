@@ -5,11 +5,9 @@ on:
   push:
     branches:
       - twrp-14.1
-      - main
-      - master
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -18,10 +16,10 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Checkout workflow repository
+      - name: Checkout device tree
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y \
@@ -37,11 +35,11 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-      - name: Install Repo Tool
+      - name: Install repo tool
         run: |
-          mkdir -p ~/bin
-          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o ~/bin/repo
-          chmod +x ~/bin/repo
+          mkdir -p "$HOME/bin"
+          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/bin/repo"
+          chmod +x "$HOME/bin/repo"
           echo "$HOME/bin" >> "$GITHUB_PATH"
 
       - name: Restore ccache
@@ -52,68 +50,84 @@ jobs:
           restore-keys: |
             ccache-${{ runner.os }}-
 
-      - name: Create workspace
+      - name: Initialize latest TWRP 14.1 source
         run: |
           mkdir -p workspace
-
-      - name: Initialize Source
-        run: |
           cd workspace
           repo init \
             --depth=1 \
             -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git \
             -b twrp-14.1
 
-      - name: Repo Sync
+      - name: Sync source
         run: |
           cd workspace
           repo sync -c --force-sync --no-clone-bundle --no-tags -j"$(nproc)"
 
-      - name: Remove .repo
-        run: |
-          rm -rf workspace/.repo
-
-      - name: Link Device Tree
-        run: |
-          mkdir -p workspace/device/realme
-          # Since the github action checks out the current branch into the runner root workspace,
-          # we just move it into the TWRP build tree. We move all contents except the workspace dir.
-          rsync -a --exclude 'workspace' ./ workspace/device/realme/samurai/
-
-      - name: Apply TWRP Patches
+      - name: Record exact source revisions
         run: |
           cd workspace
-          for patch in device/realme/samurai/patches/twrp-14.1/*.patch; do
-            echo "Applying $patch"
-            git -C bootable/recovery apply "$patch"
-          done
+          repo manifest -r -o twrp-manifest-pinned.xml
+          {
+            echo "minimal-manifest-twrp/platform_manifest_twrp_aosp twrp-14.1: $(git -C .repo/manifests rev-parse HEAD)"
+            echo "TeamWin/android_bootable_recovery android-14.1: $(git -C bootable/recovery rev-parse HEAD)"
+            echo "TeamWin/android_build android-14.1: $(git -C build/make rev-parse HEAD)"
+            echo "TeamWin/android_build_soong android-14.1: $(git -C build/soong rev-parse HEAD)"
+            echo "TeamWin/android_system_vold android-14.1: $(git -C system/vold rev-parse HEAD)"
+            echo "TeamWin/android_vendor_twrp android-14.1: $(git -C vendor/twrp rev-parse HEAD)"
+          } | tee twrp-source-pins.txt
 
-      - name: Build Recovery
+      - name: Remove repo metadata
+        run: rm -rf workspace/.repo
+
+      - name: Link device tree
+        run: |
+          mkdir -p workspace/device/realme/samurai
+          rsync -a \
+            --exclude 'workspace' \
+            --exclude '.git' \
+            ./ workspace/device/realme/samurai/
+
+      - name: Bootstrap current prebuilt checksums
+        run: |
+          cd workspace/device/realme/samurai/prebuilt
+          if [[ ! -s SHA256SUMS ]]; then
+            sha256sum Image.gz-dtb dtbo.img > SHA256SUMS
+          fi
+          cat SHA256SUMS
+
+      - name: Build and validate recovery
         env:
           USE_CCACHE: 1
           CCACHE_DIR: ~/.ccache
         run: |
           cd workspace
           export USE_CCACHE=1
-          export CCACHE_DIR=$HOME/.ccache
+          export CCACHE_DIR="$HOME/.ccache"
           ccache -M 10G
           ccache -z
-
-          source build/envsetup.sh
-          lunch twrp_samurai-eng
-          mka recoveryimage -j"$(nproc)"
-
+          bash device/realme/samurai/build.sh
           ccache -s
 
-      - name: Generate Release Tag
-        id: tag
+      - name: Collect validation artifacts
+        if: always()
         run: |
-          echo "tag=twrp-14.1-$(date +'%Y%m%d-%H%M%S')" >> "$GITHUB_OUTPUT"
+          mkdir -p artifacts
+          cp -f workspace/twrp-manifest-pinned.xml artifacts/ 2>/dev/null || true
+          cp -f workspace/twrp-source-pins.txt artifacts/ 2>/dev/null || true
+          cp -f workspace/device/realme/samurai/prebuilt/SHA256SUMS artifacts/prebuilt-SHA256SUMS 2>/dev/null || true
+          cp -f workspace/out/build-logs/twrp_samurai_*.log artifacts/ 2>/dev/null || true
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+          if [[ -f workspace/out/target/product/samurai/recovery.img ]]; then
+            cp workspace/out/target/product/samurai/recovery.img artifacts/recovery.img
+            sha256sum artifacts/recovery.img > artifacts/recovery-SHA256SUMS
+          fi
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          name: TWRP Recovery ${{ steps.tag.outputs.tag }}
-          generate_release_notes: true
-          files: workspace/out/target/product/samurai/recovery.img
+          name: twrp-14.1-samurai-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14
