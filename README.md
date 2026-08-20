@@ -12,47 +12,45 @@ Works:
 - Backup/Restore
 - USB OTG
 
-## Compilation Procedure:
+## Compilation Procedure
 
-# First Make a directory to build recovery image:
-```
+Create and enter a TWRP 14.1 source directory:
+
+```bash
 mkdir TWRP-14.1
 cd TWRP-14.1
 ```
-# After that checkout minimal twrp source with shallow repo sync to save time:
-```
+
+Initialize and sync the minimal TWRP 14.1 manifest, then clone this branch:
+
+```bash
 repo init --depth=1 -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-14.1
 repo sync
 git clone --depth=1 -b twrp-14.1-a13-a16-decrypt-readiness git@github.com:zahid5656/twrp_device_realme_RMX1931.git device/realme/samurai
 ```
-# Finally execute these:
-```
-cd device/realme/samurai 
-export ALLOW_MISSING_DEPENDENCIES=true
-cd /home/titan/TWRP-14.1
-```
-# Start Compiling: 
-```
-. build/envsetup.sh
-lunch twrp_samurai-ap2a-eng
-mka recoveryimage
+
+Build from the TWRP source root with the branch wrapper:
+
+```bash
+./device/realme/samurai/build.sh
 ```
 
-# Short single block command step to start compiling:
-```
-export ALLOW_MISSING_DEPENDENCIES=true && source build/envsetup.sh && lunch twrp_samurai-ap2a-eng && mka recoveryimage
- ```
- 
-# To test it (reboot to fastboot / bootloader):
-```
-fastboot flash recovery "/out/target/product/samurai/recovery.img"
+The wrapper selects `twrp_samurai-ap2a-eng`, validates the pinned `Image.gz-dtb` and `dtbo.img`, applies the included idempotent TWRP 14.1 source-compatibility patches, runs `mka recoveryimage`, and validates the resulting recovery image.
+
+Do not replace the wrapper with a direct clean-tree `source build/envsetup.sh && lunch ... && mka recoveryimage` invocation. The current TeamWin Android 14.1 recovery source still requires the compatibility patches shipped in this device tree; bypassing the wrapper can reproduce obsolete `*-ndk_platform` AIDL dependency failures.
+
+If either prebuilt kernel/DTBO payload is updated, regenerate `prebuilt/SHA256SUMS` from those exact files before running the wrapper.
+
+Expected Android build artifact:
+
+```text
+out/target/product/samurai/recovery.img
 ```
 
-Extra Note: The build wrapper verifies the binary structure of the
-OpenELA 4.14.357 `Image.gz-dtb` and its matching two-entry `dtbo.img` before
-starting the Android build. It applies the included, idempotent TWRP 14.1
-source-compatibility patch set. After the build it unpacks `recovery.img`,
-checks the partition-size limit and ramdisk integrity, and requires the
-embedded kernel and recovery DTBO to match the pinned prebuilts byte-for-byte.
-A successful build is not a substitute for booting the recovery and testing
-decryption on an RMX1931.
+To flash the recovery image from the TWRP source root:
+
+```bash
+fastboot flash recovery out/target/product/samurai/recovery.img
+```
+
+Extra Note: The build wrapper verifies the binary structure of the OpenELA 4.14.357 `Image.gz-dtb` and its matching two-entry `dtbo.img` before starting the Android build. It applies the included, idempotent TWRP 14.1 source-compatibility patch set. After the build it unpacks `recovery.img`, checks the partition-size limit and ramdisk integrity, and requires the embedded kernel and recovery DTBO to match the pinned prebuilts byte-for-byte. A successful build is not a substitute for booting the recovery and testing decryption on an RMX1931.
