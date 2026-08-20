@@ -239,6 +239,16 @@ echo
     # environment. Keep errexit and pipefail for the actual build commands.
     set -eo pipefail
     set +u
+
+    # The minimal TWRP manifest intentionally removes tools/asuite, while
+    # Android 14 envsetup still probes its optional shell-completion script.
+    # Disable only that unavailable completion probe; preserve all other
+    # completion handlers and all build/compiler warnings.
+    case ":${ENVSETUP_NO_COMPLETION:-}:" in
+        *:asuite:*) ;;
+        *) export ENVSETUP_NO_COMPLETION="${ENVSETUP_NO_COMPLETION:+${ENVSETUP_NO_COMPLETION}:}asuite" ;;
+    esac
+
     source build/envsetup.sh
     lunch "${PRODUCT}-${RELEASE}-${VARIANT}"
 
