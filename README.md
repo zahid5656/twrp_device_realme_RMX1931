@@ -39,7 +39,7 @@ The wrapper selects `twrp_samurai-ap2a-eng`, validates the binary structure of `
 
 Do not replace the wrapper with a direct clean-tree `source build/envsetup.sh && lunch ... && mka recoveryimage` invocation. The current TeamWin Android 14.1 recovery source still requires the compatibility patches shipped in this device tree; bypassing the wrapper can reproduce obsolete `*-ndk_platform` AIDL dependency failures.
 
-Prebuilt SHA-256 pin enforcement is intentionally disabled. `prebuilt/SHA256SUMS` is not part of the enforced build contract. The wrapper still requires both prebuilt files, validates the kernel gzip stream, appended FDT and DTBO header/entry structure, and after the build requires the embedded kernel and recovery DTBO to match the tracked prebuilts byte-for-byte.
+Static prebuilt SHA-256 pin enforcement is intentionally disabled and no checksum pin file is required. This allows `Image.gz-dtb` and `dtbo.img` to be updated during development without maintaining stale hash metadata. The wrapper still requires both prebuilt files, validates the kernel gzip stream, appended FDT and DTBO header/entry structure, and after the build requires the embedded kernel and recovery DTBO to match the current tracked prebuilts byte-for-byte.
 
 Expected Android build artifact:
 
