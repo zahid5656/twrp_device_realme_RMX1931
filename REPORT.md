@@ -14,56 +14,82 @@ Task: fix the currently observed TWRP 14.1 build-path problems without changing 
 
 The fixes below are source-validated only. They are not a new build, boot, or decryption validation result.
 
-## Verified problems
+## Verified problems and disposition
 
-### 1. README bypasses the branch compatibility patch path
+### 1. README bypassed the branch compatibility patch path — FIXED
 
-The branch contains eight idempotent TWRP 14.1 compatibility patches and `build.sh` applies them before invoking the Android build. The README instead instructed users to call `source build/envsetup.sh`, `lunch`, and `mka recoveryimage` directly.
+The branch contains eight idempotent TWRP 14.1 compatibility patches and `build.sh` applies them before invoking the Android build. The old README instructed users to call `source build/envsetup.sh`, `lunch`, and `mka recoveryimage` directly.
 
 That direct path bypasses `apply_source_compat_patches()` and reproduces the observed fatal dependency failure for obsolete Android 14 AIDL NDK module names, including `android.security.apc-ndk_platform`.
 
-Decision: `ACCEPT` — make `build.sh` the documented build entry point.
+Decision: `ACCEPT`
 
-### 2. Minimal manifest intentionally removes Asuite, while Android envsetup still probes its completion script
+Applied change: `README.md` now makes `./device/realme/samurai/build.sh` the documented build entry point and explicitly warns that direct clean-tree `mka recoveryimage` bypasses the required compatibility patch set.
+
+Commit: `dcb19f71489ee5ead8788eabdb7020f39f201e86`
+
+### 2. Minimal manifest intentionally removes Asuite, while Android envsetup still probes its completion script — FIXED IN WRAPPER
 
 The TWRP minimal manifest removes `tools/asuite`. Android 14 `build/envsetup.sh` still probes `tools/asuite/asuite.sh` and emits a warning when it is absent.
 
-Decision: `ACCEPT` — set `ENVSETUP_NO_COMPLETION` to include `asuite` inside the build wrapper before sourcing `build/envsetup.sh`. This suppresses only the unavailable Asuite shell-completion probe; it does not suppress compiler/build warnings.
+Decision: `ACCEPT`
 
-### 3. `Trying dependencies-only mode on a non-existing device tree?`
+Applied change: `build.sh` now adds only `asuite` to `ENVSETUP_NO_COMPLETION` before sourcing Android envsetup. Existing completion exclusions are preserved. No compiler/build warning suppression was added.
+
+Commit: `0bfc0de1fc6e8a3c7ef004a05211dae15e7c160f`
+
+### 3. `Trying dependencies-only mode on a non-existing device tree?` — DEFERRED AS UPSTREAM DIAGNOSTIC
 
 TeamWin `lunch` runs RoomService in dependencies-only mode after a product is found. RoomService determines device-tree presence from `.repo/local_manifests/roomservice.xml`, not by checking whether `device/realme/samurai` physically exists. A manually cloned Samurai tree can therefore trigger this misleading message.
 
-Decision: `DEFER` — do not patch TeamWin RoomService or mutate the user's `.repo/local_manifests` from the device build wrapper solely to hide a harmless diagnostic. The documented wrapper remains the supported build path.
+Decision: `DEFER`
 
-### 4. Current prebuilt hashes are stale
+No TeamWin RoomService source patch and no automatic mutation of the user's `.repo/local_manifests` was added solely to hide this harmless diagnostic. The physical Samurai tree and product are already resolved correctly by the build system.
+
+### 4. Current prebuilt hashes are stale — BLOCKER FOR WRAPPER VALIDATION
 
 `prebuilt/SHA256SUMS` still contains hashes for an older prebuilt set, while the branch currently contains updated `Image.gz-dtb` and `dtbo.img` binaries.
 
-Decision: `BLOCKER` — do not fabricate SHA-256 values. Update `prebuilt/SHA256SUMS` only after hashing the exact current binary payloads.
+Decision: `BLOCKER`
 
-## Approved remote changes
+No fabricated SHA-256 values were written. `prebuilt/SHA256SUMS` must be updated from the exact current binary payloads before the wrapper's prebuilt validation can pass.
 
-1. `README.md`
-   - replace the direct `envsetup/lunch/mka` build path with `./device/realme/samurai/build.sh`;
-   - explain that the wrapper applies the required TWRP 14.1 compatibility patches before compilation;
-   - retain the correct `twrp_samurai-ap2a-eng` target information.
+Current tracked binary sizes at audit time:
 
-2. `build.sh`
-   - preserve all existing prebuilt validation and compatibility-patch logic;
-   - add narrowly scoped Asuite completion suppression through `ENVSETUP_NO_COMPLETION` before sourcing Android envsetup;
-   - do not add broad warning suppression.
+- `prebuilt/Image.gz-dtb`: 19,166,656 bytes
+- `prebuilt/dtbo.img`: 496,493 bytes
 
-3. `prebuilt/SHA256SUMS`
-   - no write in this fix commit until the exact current binary SHA-256 values are available.
+## Applied remote changes
+
+1. `REPORT.md`
+   - recorded the source evidence, exact scope, rollback path, and unresolved hash blocker.
+
+2. `README.md`
+   - removed the direct `envsetup/lunch/mka` path as the supported build procedure;
+   - made `./device/realme/samurai/build.sh` the supported entry point;
+   - documented why the wrapper is required;
+   - removed the hard-coded `/home/titan/TWRP-14.1` path;
+   - corrected the recovery artifact path used by the flash example.
+
+3. `build.sh`
+   - preserved the eight existing compatibility patches and prebuilt/recovery validation logic;
+   - suppressed only the absent Asuite completion probe through `ENVSETUP_NO_COMPLETION`;
+   - preserved all compiler and build warnings.
+
+4. `prebuilt/SHA256SUMS`
+   - intentionally unchanged until exact current SHA-256 values are available.
 
 ## Rollback
 
-Revert the follow-up fix commit that modifies `README.md` and `build.sh`. `REPORT.md` is documentation-only and may be reverted independently if required.
+Revert, in reverse order if required:
 
-## Validation required after fix
+- `0bfc0de1fc6e8a3c7ef004a05211dae15e7c160f` — build wrapper environment fix
+- `dcb19f71489ee5ead8788eabdb7020f39f201e86` — README build-path fix
+- `3a6d06f09845e4c9a34ec77eae02ba2695692380` — initial report
 
-Run from the TWRP source root:
+## Validation required
+
+After updating `prebuilt/SHA256SUMS`, run from the TWRP source root:
 
 ```bash
 ./device/realme/samurai/build.sh
@@ -71,9 +97,11 @@ Run from the TWRP source root:
 
 Expected source-level behavior:
 
+- current prebuilt hashes validate;
 - the eight compatibility patches are applied or detected as already applied;
 - the Asuite completion warning is not emitted by the wrapper;
 - build target resolves to `twrp_samurai-ap2a-eng`;
-- stale `prebuilt/SHA256SUMS` may intentionally stop the wrapper until its hashes are updated.
+- obsolete `*-ndk_platform` AIDL dependency errors do not reappear;
+- resulting `recovery.img` is structurally validated by the wrapper.
 
-No `BUILD-VALIDATED`, `BOOT-VALIDATED`, `FEATURE-VALIDATED`, or `RELEASE-VALIDATED` claim is made by this report.
+No new `BUILD-VALIDATED`, `BOOT-VALIDATED`, `FEATURE-VALIDATED`, or `RELEASE-VALIDATED` claim is made by this remote edit pass.
