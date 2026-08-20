@@ -46,9 +46,9 @@ Decision: `DEFER`
 
 No TeamWin RoomService source patch and no automatic mutation of the user's `.repo/local_manifests` is added solely to hide this harmless diagnostic. The physical Samurai tree and product are already resolved correctly by the build system.
 
-### 4. Prebuilt SHA-256 pin verification — APPROVED FOR PERMANENT DISABLE
+### 4. Prebuilt SHA-256 pin verification — PERMANENTLY DISABLED
 
-The tracked `prebuilt/SHA256SUMS` values no longer match the updated `Image.gz-dtb` and `dtbo.img`. On GCP, the user disabled only the `sha256sum -c SHA256SUMS` gate locally and verified that the wrapper then continued successfully through prebuilt structural validation and into the Android build.
+The tracked `prebuilt/SHA256SUMS` values no longer matched the updated `Image.gz-dtb` and `dtbo.img`. On GCP, the user disabled only the `sha256sum -c SHA256SUMS` gate locally and verified that the wrapper then continued successfully through prebuilt structural validation and into the Android build.
 
 `USER-PROVIDED VERIFIED RESULT`: after the local checksum-gate bypass, the wrapper reported:
 
@@ -62,34 +62,35 @@ The tracked `prebuilt/SHA256SUMS` values no longer match the updated `Image.gz-d
 
 Decision: `ACCEPT`
 
-Approved remote change:
+Applied policy:
 
-- remove `SHA256SUMS` from the required prebuilt-file gate;
-- remove the enforced `sha256sum -c SHA256SUMS` step;
-- print `SHA-256 prebuilt pin verification: DISABLED`;
-- retain gzip integrity, appended FDT magic/size, DTBO header/magic/entry/page validation;
-- retain post-build byte-for-byte comparison of the embedded kernel and recovery DTBO against the exact tracked prebuilts;
-- retain final image/ramdisk/partition-size validation.
+- `build.sh` requires only `Image.gz-dtb` and `dtbo.img` as prebuilt inputs;
+- `sha256sum -c SHA256SUMS` is not executed;
+- `prebuilt/SHA256SUMS` is removed from the branch because the kernel and DTBO are intentionally updated during development and static hash pin maintenance is not part of the build contract;
+- gzip integrity, appended FDT magic/size, DTBO header/magic/entry/page validation remain enabled;
+- post-build byte-for-byte comparison of the embedded kernel and recovery DTBO against the exact current prebuilts remains enabled;
+- final image, ramdisk and partition-size validation remain enabled.
 
-This disables only stale hash pin enforcement. It does not disable binary structural validation or final payload identity validation.
+This removes only static checksum pinning. It does not disable binary structural validation or final payload identity validation.
 
-## Remote change plan
+## Applied remote changes
 
 1. `build.sh`
-   - change the required prebuilt list from `Image.gz-dtb dtbo.img SHA256SUMS` to `Image.gz-dtb dtbo.img`;
-   - replace `sha256sum -c SHA256SUMS` with the explicit disabled-status message;
-   - preserve every structural and post-build validation check.
+   - required prebuilt list is `Image.gz-dtb dtbo.img`;
+   - static SHA-256 verification is disabled;
+   - every structural and post-build validation check remains enabled.
 
 2. `README.md`
-   - remove the instruction to regenerate `prebuilt/SHA256SUMS` before each updated-prebuilt build;
-   - document that checksum pin enforcement is disabled while structural and embedded-payload checks remain mandatory.
+   - documents the wrapper as the supported build path;
+   - documents that static checksum pinning is not used;
+   - documents the remaining structural and embedded-payload checks.
 
 3. `prebuilt/SHA256SUMS`
-   - leave untouched; it is no longer part of the enforced build contract.
+   - removed from the branch as obsolete development metadata.
 
 ## Rollback
 
-Revert the checksum-policy follow-up commits to restore SHA-256 pin enforcement. Earlier wrapper fixes may be reverted independently if required.
+Restore `prebuilt/SHA256SUMS` and the corresponding `sha256sum -c SHA256SUMS` gate only if static prebuilt pinning is intentionally reintroduced. Earlier wrapper fixes may be reverted independently if required.
 
 ## Validation after remote change
 
@@ -101,7 +102,7 @@ Run from the TWRP source root:
 
 Expected behavior:
 
-- wrapper does not execute `sha256sum -c SHA256SUMS`;
+- no `SHA256SUMS` file is required;
 - wrapper prints `SHA-256 prebuilt pin verification: DISABLED`;
 - kernel/DTBO structural validation must still pass;
 - the eight compatibility patches are applied or detected as already applied;
