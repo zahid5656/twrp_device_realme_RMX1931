@@ -34,7 +34,7 @@ The TWRP minimal manifest removes `tools/asuite`. Android 14 `build/envsetup.sh`
 
 Decision: `ACCEPT`
 
-Applied change: `build.sh` now adds only `asuite` to `ENVSETUP_NO_COMPLETION` before sourcing Android envsetup. Existing completion exclusions are preserved. No compiler/build warning suppression was added.
+Applied change: `build.sh` adds only `asuite` to `ENVSETUP_NO_COMPLETION` before sourcing Android envsetup. Existing completion exclusions are preserved. No compiler/build warning suppression was added.
 
 Commit: `0bfc0de1fc6e8a3c7ef004a05211dae15e7c160f`
 
@@ -44,64 +44,68 @@ TeamWin `lunch` runs RoomService in dependencies-only mode after a product is fo
 
 Decision: `DEFER`
 
-No TeamWin RoomService source patch and no automatic mutation of the user's `.repo/local_manifests` was added solely to hide this harmless diagnostic. The physical Samurai tree and product are already resolved correctly by the build system.
+No TeamWin RoomService source patch and no automatic mutation of the user's `.repo/local_manifests` is added solely to hide this harmless diagnostic. The physical Samurai tree and product are already resolved correctly by the build system.
 
-### 4. Current prebuilt hashes are stale — BLOCKER FOR WRAPPER VALIDATION
+### 4. Prebuilt SHA-256 pin verification — APPROVED FOR PERMANENT DISABLE
 
-`prebuilt/SHA256SUMS` still contains hashes for an older prebuilt set, while the branch currently contains updated `Image.gz-dtb` and `dtbo.img` binaries.
+The tracked `prebuilt/SHA256SUMS` values no longer match the updated `Image.gz-dtb` and `dtbo.img`. On GCP, the user disabled only the `sha256sum -c SHA256SUMS` gate locally and verified that the wrapper then continued successfully through prebuilt structural validation and into the Android build.
 
-Decision: `BLOCKER`
+`USER-PROVIDED VERIFIED RESULT`: after the local checksum-gate bypass, the wrapper reported:
 
-No fabricated SHA-256 values were written. `prebuilt/SHA256SUMS` must be updated from the exact current binary payloads before the wrapper's prebuilt validation can pass.
+- `Prebuilt structure: PASS`
+- kernel size 19,166,656 bytes
+- appended DTB size 451,191 bytes
+- DTBO entry count 2
+- all eight TWRP 14.1 compatibility patches applied
+- product configuration reached `twrp_samurai-ap2a-eng`
+- Android build started.
 
-Current tracked binary sizes at audit time:
+Decision: `ACCEPT`
 
-- `prebuilt/Image.gz-dtb`: 19,166,656 bytes
-- `prebuilt/dtbo.img`: 496,493 bytes
+Approved remote change:
 
-## Applied remote changes
+- remove `SHA256SUMS` from the required prebuilt-file gate;
+- remove the enforced `sha256sum -c SHA256SUMS` step;
+- print `SHA-256 prebuilt pin verification: DISABLED`;
+- retain gzip integrity, appended FDT magic/size, DTBO header/magic/entry/page validation;
+- retain post-build byte-for-byte comparison of the embedded kernel and recovery DTBO against the exact tracked prebuilts;
+- retain final image/ramdisk/partition-size validation.
 
-1. `REPORT.md`
-   - recorded the source evidence, exact scope, rollback path, and unresolved hash blocker.
+This disables only stale hash pin enforcement. It does not disable binary structural validation or final payload identity validation.
+
+## Remote change plan
+
+1. `build.sh`
+   - change the required prebuilt list from `Image.gz-dtb dtbo.img SHA256SUMS` to `Image.gz-dtb dtbo.img`;
+   - replace `sha256sum -c SHA256SUMS` with the explicit disabled-status message;
+   - preserve every structural and post-build validation check.
 
 2. `README.md`
-   - removed the direct `envsetup/lunch/mka` path as the supported build procedure;
-   - made `./device/realme/samurai/build.sh` the supported entry point;
-   - documented why the wrapper is required;
-   - removed the hard-coded `/home/titan/TWRP-14.1` path;
-   - corrected the recovery artifact path used by the flash example.
+   - remove the instruction to regenerate `prebuilt/SHA256SUMS` before each updated-prebuilt build;
+   - document that checksum pin enforcement is disabled while structural and embedded-payload checks remain mandatory.
 
-3. `build.sh`
-   - preserved the eight existing compatibility patches and prebuilt/recovery validation logic;
-   - suppressed only the absent Asuite completion probe through `ENVSETUP_NO_COMPLETION`;
-   - preserved all compiler and build warnings.
-
-4. `prebuilt/SHA256SUMS`
-   - intentionally unchanged until exact current SHA-256 values are available.
+3. `prebuilt/SHA256SUMS`
+   - leave untouched; it is no longer part of the enforced build contract.
 
 ## Rollback
 
-Revert, in reverse order if required:
+Revert the checksum-policy follow-up commits to restore SHA-256 pin enforcement. Earlier wrapper fixes may be reverted independently if required.
 
-- `0bfc0de1fc6e8a3c7ef004a05211dae15e7c160f` — build wrapper environment fix
-- `dcb19f71489ee5ead8788eabdb7020f39f201e86` — README build-path fix
-- `3a6d06f09845e4c9a34ec77eae02ba2695692380` — initial report
+## Validation after remote change
 
-## Validation required
-
-After updating `prebuilt/SHA256SUMS`, run from the TWRP source root:
+Run from the TWRP source root:
 
 ```bash
 ./device/realme/samurai/build.sh
 ```
 
-Expected source-level behavior:
+Expected behavior:
 
-- current prebuilt hashes validate;
+- wrapper does not execute `sha256sum -c SHA256SUMS`;
+- wrapper prints `SHA-256 prebuilt pin verification: DISABLED`;
+- kernel/DTBO structural validation must still pass;
 - the eight compatibility patches are applied or detected as already applied;
-- the Asuite completion warning is not emitted by the wrapper;
 - build target resolves to `twrp_samurai-ap2a-eng`;
-- obsolete `*-ndk_platform` AIDL dependency errors do not reappear;
-- resulting `recovery.img` is structurally validated by the wrapper.
+- resulting `recovery.img` must still pass structure, ramdisk, size and embedded kernel/DTBO identity checks.
 
 No new `BUILD-VALIDATED`, `BOOT-VALIDATED`, `FEATURE-VALIDATED`, or `RELEASE-VALIDATED` claim is made by this remote edit pass.
