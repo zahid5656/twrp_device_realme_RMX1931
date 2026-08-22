@@ -135,10 +135,7 @@ BOOT_SECURITY_PATCH := $(PLATFORM_SECURITY_PATCH)
 
 # TWRP Build Flags
 TW_DEVICE_VERSION := Realme X2 Pro
-# Disabled for custom theme
-# TW_THEME := portrait_hdpi
-# Using my custom theme
-TW_CUSTOM_THEME := true
+TW_THEME := portrait_hdpi
 RECOVERY_SDCARD_ON_DATA := true
 TARGET_RECOVERY_QCOM_RTC_FIX := true
 TW_EXCLUDE_DEFAULT_USB_INIT := true
