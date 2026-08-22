@@ -48,3 +48,13 @@ TW_RECOVERY_ADDITIONAL_RELINK_LIBRARY_FILES += \
 # Vibrator
 TW_SUPPORT_INPUT_AIDL_HAPTICS := true
 
+# Custom TWRP Theme Copy Rules
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/recovery/root/twres/ui.xml:recovery/root/twres/ui.xml \
+    $(DEVICE_PATH)/recovery/root/twres/portraits.xml:recovery/root/twres/portrait.xml \
+    $(DEVICE_PATH)/recovery/root/twres/splash.xml:recovery/root/twres/splash.xml
+
+# Copy the complete folders (fonts, images, languages)
+PRODUCT_COPY_FILES += \
+    $(call find-copy-subdir-files,*,$(DEVICE_PATH)/recovery/root/twres/fonts,recovery/root/twres/fonts) \
+    $(call find-copy-subdir-files,*,$(DEVICE_PATH)/recovery/root/twres/images,recovery/root/twres/images)
