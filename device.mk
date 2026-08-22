@@ -54,7 +54,7 @@ PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/recovery/root/twres/portraits.xml:recovery/root/twres/portrait.xml \
     $(DEVICE_PATH)/recovery/root/twres/splash.xml:recovery/root/twres/splash.xml
 
-# Copy the complete folders (fonts, images, languages)
+# Copy the complete folders (fonts, images)
 PRODUCT_COPY_FILES += \
     $(call find-copy-subdir-files,*,$(DEVICE_PATH)/recovery/root/twres/fonts,recovery/root/twres/fonts) \
     $(call find-copy-subdir-files,*,$(DEVICE_PATH)/recovery/root/twres/images,recovery/root/twres/images)
