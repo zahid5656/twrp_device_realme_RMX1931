@@ -1,0 +1,10 @@
+<!--
+    Input:
+        device/realme/samurai/als/default/vendor.lineage.oplus_als.service.xml
+-->
+<manifest version="9.0" type="framework">
+    <hal format="aidl">
+        <name>vendor.lineage.oplus_als</name>
+        <fqname>IAreaCapture/default</fqname>
+    </hal>
+</manifest>
