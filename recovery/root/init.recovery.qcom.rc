@@ -26,7 +26,6 @@
 #
 
 import /init.recovery.qcom_decrypt.rc
-import /init.recovery.usb.rc
 
 on fs
     wait /dev/block/platform/soc/${ro.boot.bootdevice}
@@ -49,6 +48,8 @@ service vendor.qti.vibrator /system/bin/vendor.qti.hardware.vibrator.service
     seclabel u:r:recovery:s0
 
 on boot
+    variant-script.sh 
     start health-hal-2-1
     start vendor.qti.vibrator
     setprop sys.usb.config adb
+    write /sys/class/leds/vibrator/level 1
