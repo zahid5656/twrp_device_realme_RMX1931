@@ -1,0 +1,11 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Samurai recovery build <samurai@localhost>
+Date: Thu, 16 Jul 2026 00:00:00 +0600
+Subject: [PATCH] recovery: use current AIDL NDK module names
+
+Android 14 generates AIDL NDK modules with the `-ndk` suffix but does not
+create the legacy `-ndk_platform` aliases. Recovery uses the current naming.
+---
+ This patch stub documents the necessary alignment for AIDL module naming.
+ The recovery and related projects must reference the `-ndk` names directly.
+

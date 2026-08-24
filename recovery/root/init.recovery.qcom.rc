@@ -28,15 +28,9 @@
 import /init.recovery.qcom_decrypt.rc
 import /init.recovery.usb.rc
 
-on init
-    # Help prepdecrypt align OS version / security patch with system for FBE
-    setprop prepdecrypt.setpatch true
-    # Verbose decrypt logging (recovery.log) — set 0 to silence
-    setprop prepdecrypt.loglevel 2
-
 on fs
     wait /dev/block/platform/soc/${ro.boot.bootdevice}
-    symlink /dev/block/platform/soc/${ro.boot.bootdevice} /dev/block/bootdevice
+    symlink /dev/block/platform/soc/${ro.boot.bootdevice} /dev/block/bootdevice	
     write /sys/class/power_supply/usb/otg_switch 1
     export ANDROID_ROOT /system_root
 
@@ -52,7 +46,7 @@ service vendor.qti.vibrator /system/bin/vendor.qti.hardware.vibrator.service
     group root
     disabled
     setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib:/system/lib64:/system/lib:/sbin
-    seclabel u:r:recovery:s0
+    seclabel u:r:recovery:s0	
 
 on boot
     start variant-script

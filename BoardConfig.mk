@@ -3,12 +3,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# For building with minimal manifest in QPR2
 
+# For building with minimal manifest in QPR2
 ALLOW_MISSING_DEPENDENCIES := true
 
 # Device Path
 DEVICE_PATH := device/realme/samurai
+
+# A-only dedicated recovery
+AB_OTA_UPDATER := false
+TARGET_NO_RECOVERY := false
+BOARD_USES_RECOVERY_AS_BOOT := false
 
 # Architecture (SM8150 / Kryo 485; validated against TeamWin 14.1 build rules)
 TARGET_ARCH := arm64
@@ -44,7 +49,7 @@ TARGET_SUPPORTS_64_BIT_APPS := true
 TARGET_USES_QCOM_BSP := true
 
 # Kernel
-BOARD_KERNEL_CMDLINE := androidboot.boot_devices=soc/1d84000.ufshc androidboot.console=ttyMSM0 androidboot.hardware=qcom androidboot.usbcontroller=a600000.dwc3 kpti=off loop.max_part=7 lpm_levels.sleep_disabled=1 msm_rtb.filter=0x237 pm.sleep_mode=1 service_locator.enable=1 swiotlb=2048 cgroup_disable=pressure
+BOARD_KERNEL_CMDLINE := androidboot.boot_devices=soc/1d84000.ufshc androidboot.console=ttyMSM0 androidboot.hardware=qcom androidboot.usbcontroller=a600000.dwc3 kpti=off loop.max_part=7 lpm_levels.sleep_disabled=1 msm_rtb.filter=0x237 service_locator.enable=1 androidboot.configfs=true
 BOARD_KERNEL_BASE := 0x00000000
 BOARD_KERNEL_PAGESIZE := 4096
 BOARD_KERNEL_TAGS_OFFSET := 0x00008000
@@ -79,14 +84,12 @@ BOARD_DTBOIMG_PARTITION_SIZE := 25165824
 BOARD_SYSTEMIMAGE_PARTITION_SIZE := 4487905280
 BOARD_ODMIMAGE_PARTITION_SIZE := 268435456
 BOARD_VENDORIMAGE_PARTITION_SIZE := 1649410048
-# BOARD_USERDATAIMAGE_PARTITION_SIZE := 12884901888
 
 # File Systems Types
 BOARD_SYSTEMIMAGE_PARTITION_TYPE := ext4
 BOARD_ODMIMAGE_FILE_SYSTEM_TYPE := ext4
 BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE := ext4
 BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4
-# BOARD_USERDATAIMAGE_FILE_SYSTEM_TYPE := ext4
 # Samurai userdata defaults to F2FS; recovery still supports both F2FS and ext4.
 BOARD_USERDATAIMAGE_FILE_SYSTEM_TYPE := f2fs
 
@@ -136,7 +139,6 @@ TW_EXCLUDE_DEFAULT_USB_INIT := true
 TW_EXTRA_LANGUAGES := true
 TW_INCLUDE_NTFS_3G := true
 TW_USE_TOOLBOX := true
-TW_INCLUDE_RESETPROP := true
 TW_INCLUDE_LIBRESETPROP := true
 TW_INPUT_BLACKLIST := "hbtp_vm"
 TW_BRIGHTNESS_PATH := "/sys/class/backlight/panel0-backlight/brightness"
@@ -163,3 +165,4 @@ TARGET_USES_LOGD := true
 BUILD_BROKEN_DUP_RULES := true
 BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
 BUILD_BROKEN_MISSING_REQUIRED_MODULES := true
+BUILD_BROKEN_INCORRECT_PARTITION_IMAGES := true
